@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatGPT-Web</title>
+  <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.2.45/vue.global.js"></script>
+  <link href="https://cdn.bootcdn.net/ajax/libs/element-plus/2.2.28/index.css" rel="stylesheet" />
+
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/axios/1.2.5/axios.min.js"></script>
+  <script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.2.28/index.full.js"></script>
+
+  <style>
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+
+    @keyframes octocat-wave {
+
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+
+    .el-header {
+      background: var(--el-color-black);
+      color: aliceblue;
+    }
+
+    .slider-block {
+      display: flex;
+      align-items: center;
+    }
+
+    .slider-block .el-slider {
+      margin-top: 0;
+      margin-left: 12px;
+    }
+
+    .slider-block .slider-laber {
+      font-size: 14px;
+      color: var(--el-text-color-secondary);
+      line-height: 44px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 0;
+    }
+
+    .slider-block .slider-laber+.el-slider {
+      flex: 0 0 70%;
+    }
+
+    body {
+      margin: 0 !important;
+      height: 100%;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="hello-vue">
+    <el-container>
+      <el-header>
+        <h1>SokoChatGPT</h1>
+      </el-header>
+      <el-main>
+        <el-row :gutter="40">
+          <el-col :span="8" class="col-params" v-loading="loading" element-loading-text="马上来了..."
+            :element-loading-spinner="svg" element-loading-svg-view-box="-10, -10, 50, 50"
+            element-loading-background="rgba(0, 0, 0, 0.9)">
+            <el-button size="large" type="success" @click="submitForm">
+            	<i class="el-icon"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M77.248 415.04a64 64 0 0 1 90.496 0l226.304 226.304L846.528 188.8a64 64 0 1 1 90.56 90.496l-543.04 543.04-316.8-316.8a64 64 0 0 1 0-90.496z"></path></svg></i>
+           		<span class=""> 运行</span>
+            </el-button>
+            <h2></h2>
+            <el-form>
+              <h4></h4>
+              <el-input v-model="key" placeholder="API秘钥" show-password type="password"></el-input>
+              <h4></h4>
+              <el-input type="textarea" v-model="prompt" placeholder="你想问什么？" rows="20"></el-input>
+
+              <h4></h4>
+              
+              
+              
+              <div class="slider-block">
+                <span class="slider-laber">Max_tokens</span>
+              	<el-input-number type="number" v-model="max_tokens"></el-input-number>
+              </div>
+              <h4></h4>
+              <div class="slider-block">
+                <span class="slider-laber">Temperature</span>
+                <el-slider v-model="temperature" :step="0.1" :min="0" :max="1" show-input />
+              </div>
+              <h4></h4>
+              <div class="slider-block">
+                <span class="slider-laber">Top_p</span>
+                <el-slider v-model="top_p" :step="0.1" :min="0" :max="1" show-input />
+              </div>
+              <h4></h4>
+              <div class="slider-block">
+                <span class="slider-laber">Frequency_penalty</span>
+                <el-slider v-model="frequency_penalty" :step="0.1" :min="-2" :max="2" show-input />
+              </div>
+              <h4></h4>
+              <div class="slider-block">
+                <span class="slider-laber">Presence_penalty</span>
+                <el-slider v-model="presence_penalty" :step="0.1" :min="-2" :max="2" show-input />
+              </div>
+              <h4></h4>
+              <div class="slider-block">
+                <span class="slider-laber">Model</span>
+              	<el-select v-model="model" class="m-2" placeholder="Model" size="large">
+                <el-option v-for="item in models" :key="item.value" :label="item.label" :value="item.value">{{
+                  item
+                  }}</el-option>
+              </el-select>
+              </div>
+            </el-form>
+
+
+
+            <el-link href="https://beta.openai.com/docs/api-reference/completions/create#completions/create-model"
+              target="_blank" type="danger">参数说明</el-link>
+              <p style="font-size:12px; color:#ccc;">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</p>
+
+
+
+          </el-col>
+          <el-col :span="16">
+            <el-button size="large" type="warning" @click="downloadTxt" :disabled="download_disable">
+            	<i class="el-icon"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M160 832h704a32 32 0 1 1 0 64H160a32 32 0 1 1 0-64zm384-253.696 236.288-236.352 45.248 45.248L508.8 704 192 387.2l45.248-45.248L480 584.704V128h64v450.304z"></path></svg></i>
+            	<span class=""> 保存</span>
+            </el-button>
+            <h2></h2>
+
+            <p id="result" style="color:#000;font-size:14px;white-space: pre-wrap;">{{ response }}</p>
+          </el-col>
+        </el-row>
+      </el-main>
+    </el-container>
+  </div>
+  
+  
+  	
+
+  
+
+  <script>
+    const HelloVueApp = {
+      data() {
+        return {
+          loading: false,
+          key: '',
+          prompt: '',
+          temperature: 1,
+          top_p: 1,
+          max_tokens: 2048,
+          frequency_penalty: 0,
+          presence_penalty: 0,
+          stop: ["Human:", "AI:"],
+          model: 'text-davinci-003',
+          models: ['text-davinci-003', 'text-davinci-002', 'text-curie-001'],
+          response: '',
+          download_disable: true
+        }
+      },
+      watch: {
+        response(resp) {
+          if (resp == '') {
+            this.download_disable = true;
+          } else {
+            this.download_disable = false;
+          }
+        }
+      },
+      methods: {
+        downloadTxt() {
+          let text = 'Prompt: ' + this.prompt + '\n' + document.getElementById('result').innerText;
+          let element = document.createElement("a");
+          let file = new Blob([text], { type: 'text/plain' });
+          element.href = URL.createObjectURL(file);
+          element.download = "download.txt";
+          element.click();
+        },
+        submitForm() {
+          let data = {
+            prompt: this.prompt,
+            temperature: this.temperature,
+            top_p: this.top_p,
+            model: this.model,
+            max_tokens: this.max_tokens,
+            frequency_penalty: this.frequency_penalty,
+            presence_penalty: this.presence_penalty,
+            stop: this.stop
+          }
+          this.loading = true
+          axios.post('https://api.openai.com/v1/completions', data, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ` + this.key,
+            }
+          })
+            .then(response => {
+              this.loading = false
+              this.response = response.data.choices[0].text;
+              console.log(this.response)
+            })
+            .catch(error => {
+              this.loading = false
+              console.log(error);
+            });
+        }
+      }
+    }
+
+    Vue.createApp(HelloVueApp).use(ElementPlus).mount('#hello-vue')
+  </script>
+  
+  <script>
+    window.addEventListener('error', function (e) {
+        if (e.message === 'network timeout') {
+            // code to reconnect chatgpt
+        } else if (e.message === 'server overload') {
+            // code to reduce load and reconnect chatgpt
+        } else if (e.message === 'client out of memory') {
+            // code to increase memory and reconnect chatgpt
+        }
+    }, false);
+</script>
+  
+  
+</body>
+
+</html>
